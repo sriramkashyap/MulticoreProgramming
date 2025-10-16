@@ -1,0 +1,42 @@
+#ifndef STATS_H
+#define STATS_H
+
+#include <cstdint>
+#include <vector>
+#include <string>
+
+namespace stats {
+
+class Timer {
+  private:
+  int64_t start = 0;
+  
+  int64_t GetTimeNs();
+  public:
+  void Start() {
+    start = GetTimeNs();
+  }
+  
+  int64_t GetElapsedNs() {
+    return (GetTimeNs() - start);
+  }
+
+};
+
+class Metric {
+  private:
+    std::vector<int64_t> data;
+  public:
+	Metric();
+	explicit Metric(int starting_size);
+    void Record(int64_t value);
+	int64_t Count();
+	int64_t Percentile(float p);
+	void Reset();
+	bool Save(std::string file_name);
+	void PrintSummary();
+};
+
+} // namespace stats.
+
+#endif // STATS_H
