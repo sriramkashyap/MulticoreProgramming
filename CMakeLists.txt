@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_CXX_STANDARD 20)
-
-set(PERFETTO_PATH "C:\\Code\\perfetto-cpp-sdk-src")
-
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CUDA_ARCHITECTURES 75 80 86 87 89 90 100 110 120)
@@ -28,8 +25,14 @@ add_library(scheduler STATIC scheduler.cc)
 add_library(image STATIC image.cc)
 add_library(util STATIC util.cc)
 
+if(WIN32)
+  set(PERFETTO_PATH "C:\\Code\\perfetto-cpp-sdk-src")
+  add_library(perfetto STATIC "${PERFETTO_PATH}\\perfetto.cc")
+else()
+  set(PERFETTO_PATH "~/perfetto/perfetto/sdk")
+  add_library(perfetto STATIC "${PERFETTO_PATH}/perfetto.cc")
+endif()
 include_directories(${PERFETTO_PATH})
-add_library(perfetto STATIC "${PERFETTO_PATH}\\perfetto.cc")
 
 add_executable(test test.cc)
 

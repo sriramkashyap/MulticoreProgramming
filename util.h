@@ -9,4 +9,4 @@ bool CreateDir(const std::string& path);
 
 }  // namespace utilities
 
-#endif UTIL_H
+#endif // UTIL_H
