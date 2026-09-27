@@ -1,6 +1,7 @@
 #include "nbody.h"
 #include "image.h"
 #include "scheduler.h"
+#include "thread_pool.h"
 
 #include <thread>
 #include <mutex>
@@ -10,10 +11,6 @@
 #include <omp.h>
 
 namespace nbody {
-float Gravity(float m1, float m2, float square_distance) {
-  constexpr float kGravityConstant = 1.0f;
-  return square_distance == 0 ? 0 : kGravityConstant * m1 * m2 / square_distance;
-}
 
 void ParticleSystem::Initialize(int count, Point2D min, Point2D max, unsigned int seed) {
   data.resize(count);
@@ -29,13 +26,13 @@ void ParticleSystem::Initialize(int count, Point2D min, Point2D max, unsigned in
 
 bool ParticleSystem::SaveToFile(const std::string& file_name, Point2D min, Point2D max, int width, int height) {
   image::Image img(width, height);
-  image::RGB color(255,255,255);
+  image::RGB color('\xFF', '\xFF', '\xFF');
   Point2D resize = max.Sub(min);
   for (PointMass& p: data) {
-	auto& pos= p.position;
-	if (!pos.Inside(min, max)) continue;
-	Point2D result = pos.Sub(min).Scale(width/resize.x, height/resize.y);
-    img.Set(static_cast<int>(result.x), static_cast<int>(result.y), color);
+	  auto& pos= p.position;
+	  if (!pos.Inside(min, max)) continue;
+	  Point2D p1 = pos.Sub(min).Scale(width/resize.x, height/resize.y);
+    img.Set(static_cast<int>(p1.x), static_cast<int>(p1.y), color);
   }
   return img.SaveToFile(file_name);
 }
@@ -46,7 +43,7 @@ void ParticleSystem::CalculatePoint(int index, float timestep) {
   for (int j = 0; j < data.size(); ++j) {
     Point2D vec = data[j].position.Sub(pi.position);
     float r_square = vec.SquareLength();
-	net_force = net_force.Add(vec.Scale(Gravity(pi.mass, data[j].mass, r_square)));
+	  net_force = net_force.Add(vec.Scale(Gravity(pi.mass, data[j].mass, r_square)));
   }
   pi.velocity = pi.velocity.Add(net_force.Scale(timestep / pi.mass));
 }
@@ -75,7 +72,7 @@ void ParticleSystemOpenMP::Simulate(float timestep) {
 }
 
 void ParticleSystemOpenMPDynamic::Simulate(float timestep) { 
-  #pragma omp parallel for schedule(dynamic)
+  #pragma omp parallel for schedule(dynamic) num_threads(20)
   for (int i = 0; i < data.size(); ++i) {
     CalculatePoint(i, timestep);
   }
@@ -101,15 +98,32 @@ void WorkerFunction(ParticleSystem* system, std::atomic<int>* jobs_ptr, float ti
 
 void ParticleSystemStdThread::Simulate(float timestep) {
   int num_threads = scheduler::GetNumProcs();
-  std::atomic<int> jobs(data.size());
+  std::atomic<int> jobs(static_cast<int>(data.size()));
   
   std::vector<std::thread> threads;
   for (int i = 0; i < num_threads; ++i) {
-	threads.emplace_back(WorkerFunction, this, &jobs, timestep); // Create and add threads.
+	  threads.emplace_back(WorkerFunction, this, &jobs, timestep); // Create and add threads.
   }
   for (std::thread& t : threads) {
    if (t.joinable()) t.join(); // Wait for each thread to complete.
   }
+
+  // Update results after all calculations are done. Could be parallel?
+  for (int i = 0; i < data.size(); ++i) {
+	UpdatePoint(i, timestep);
+  }
+}
+
+ParticleSystemStdThreadPool::ParticleSystemStdThreadPool() : pool_(scheduler::GetNumProcs()){}
+
+void ParticleSystemStdThreadPool::Simulate(float timestep) {
+  int num_threads = scheduler::GetNumProcs();
+  std::atomic<int> jobs(static_cast<int>(data.size()));
+
+  for (int i = 0; i < num_threads; ++i) {
+    pool_.enqueue([&](){WorkerFunction(this, &jobs, timestep);});
+  }
+  pool_.wait_for_all();
 
   // Update results after all calculations are done. Could be parallel?
   for (int i = 0; i < data.size(); ++i) {

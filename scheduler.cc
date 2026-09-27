@@ -1,14 +1,19 @@
 #include "scheduler.h"
 
+#include <cstring>
+#include <vector>
+#include <chrono>
+#include <thread>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
 #include <sched.h>
 #include <sys/syscall.h>
 #include <sys/sysinfo.h>
 #include <linux/sched/types.h>
-#include <cstring>
 #include <unistd.h>
-#include <vector>
-#include <chrono>
-#include <thread>
+#endif
 
 namespace scheduler {
 
@@ -16,15 +21,37 @@ namespace scheduler {
 int force_num_procs = 0;
 
 bool SetAffinity(std::vector<int> cores) {
-  cpu_set_t     set;
+#if defined(_WIN32) || defined(_WIN64)
+  DWORD_PTR mask = 0;
+  for (int core : cores) {
+    if (core >= 0 && core < 64) {
+      mask |= (1ULL << core);
+    }
+  }
+  // Set affinity for the current thread
+  return SetThreadAffinityMask(GetCurrentThread(), mask) != 0;
+#else
+  cpu_set_t set;
   CPU_ZERO(&set);
-  for (int core: cores) {
+  for (int core : cores) {
     CPU_SET(core, &set);
   }
   return (sched_setaffinity(0, cores.size(), &set) >= 0);
+#endif
 }
 
 bool SetAttributes(SchedulerAttributes& s) {
+#if defined(_WIN32) || defined(_WIN64)
+  // Windows doesn't have direct equivalents for Linux CFS/EEVDF util min/max or exact nice values.
+  // We map the niceness attribute to Windows thread priorities as a close approximation.
+  int priority = THREAD_PRIORITY_NORMAL;
+  if (s.niceness < 0) {
+    priority = THREAD_PRIORITY_HIGHEST;
+  } else if (s.niceness > 0) {
+    priority = THREAD_PRIORITY_LOWEST;
+  }
+  return SetThreadPriority(GetCurrentThread(), priority) != 0;
+#else
   struct sched_attr attr;
   size_t size = sizeof(struct sched_attr);
   memset(&attr, 0, size);
@@ -34,10 +61,11 @@ bool SetAttributes(SchedulerAttributes& s) {
   attr.sched_util_min = s.min_util;
   attr.sched_util_max = s.max_util;
   
-  if (syscall(SYS_sched_setattr,0, &attr, 0) == -1) {
-  	return false;
+  if (syscall(SYS_sched_setattr, 0, &attr, 0) == -1) {
+    return false;
   }
   return true;
+#endif
 }
 
 void SleepForMs(int milliseconds) {
@@ -47,11 +75,11 @@ void SleepForMs(int milliseconds) {
 }
 
 int GetNumProcs() {
-  return force_num_procs == 0 ? get_nprocs() : force_num_procs;
+  return (force_num_procs > 0) ? force_num_procs : std::thread::hardware_concurrency();
 }
 
 void ForceNumProcs(int n) {
   force_num_procs = n;
 }
 
-} // namespace scheduler.
+} // namespace scheduler

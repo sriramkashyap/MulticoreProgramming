@@ -33,8 +33,8 @@ class Metric {
 	int64_t Count();
 	int64_t Percentile(float p);
 	void Reset();
-	bool Save(std::string file_name);
-	void PrintSummary();
+	bool Save(const std::string& file_name);
+	void PrintSummary(float scale);
 };
 
 } // namespace stats.

@@ -1,5 +1,5 @@
 #include "image.h"
-
+#include "util.h"
 #include <opencv2/opencv.hpp> // Include the main OpenCV header
 
 namespace image {
@@ -8,14 +8,15 @@ Image::Image(int width, int height) {
   image_ = cv::Mat::zeros(height, width, CV_8UC3); // A black RGB image
 }
 bool Image::SaveToFile(const std::string& path) {
+  if (!utilities::CreateDir(path)) { return false; }
   return cv::imwrite(path, image_);
 }
 
-void Image::Set(int x, int y, const RGB& value){
-  image_.at<cv::Vec3b>(x, y) = cv::Vec3b(value.r, value.g, value.b);
+void Image::Set(int x, int y, const RGB& color) {
+  image_.at<cv::Vec3b>(x, y) = cv::Vec3b(color.r, color.g, color.b);
 }
 
-RGB Image::Get(int x, int y){
+RGB Image::Get(int x, int y) {
   auto& pix = image_.at<cv::Vec3b>(x, y);
   return RGB(pix[0],pix[1],pix[2]);
 }

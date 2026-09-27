@@ -15,7 +15,7 @@ class Image {
 public:
   explicit Image(int width, int height);
   bool SaveToFile(const std::string& path);
-  void Set(int x, int y, const RGB& value);
+  void Set(int x, int y, const RGB& color);
   RGB Get(int x, int y);
   void Show(const std::string& window_name, int duration_ms = 10);
   
