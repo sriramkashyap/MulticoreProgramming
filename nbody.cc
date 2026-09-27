@@ -18,8 +18,8 @@ void ParticleSystem::Initialize(int count, Point2D min, Point2D max, unsigned in
   float x_scale = (max.x - min.x);
   float y_scale = (max.y - min.y);
   for (int i = 0; i < count; ++i) {
-	float x = min.x + (rand() * x_scale / RAND_MAX);
-	float y = min.y + (rand() * y_scale / RAND_MAX);
+    float x = min.x + (rand() * x_scale / RAND_MAX);
+    float y = min.y + (rand() * y_scale / RAND_MAX);
     data[i].position = Point2D(x, y);
   }
 }
@@ -29,9 +29,9 @@ bool ParticleSystem::SaveToFile(const std::string& file_name, Point2D min, Point
   image::RGB color('\xFF', '\xFF', '\xFF');
   Point2D resize = max.Sub(min);
   for (PointMass& p: data) {
-	  auto& pos= p.position;
-	  if (!pos.Inside(min, max)) continue;
-	  Point2D p1 = pos.Sub(min).Scale(width/resize.x, height/resize.y);
+    auto& pos= p.position;
+    if (!pos.Inside(min, max)) continue;
+    Point2D p1 = pos.Sub(min).Scale(width/resize.x, height/resize.y);
     img.Set(static_cast<int>(p1.x), static_cast<int>(p1.y), color);
   }
   return img.SaveToFile(file_name);
@@ -43,7 +43,7 @@ void ParticleSystem::CalculatePoint(int index, float timestep) {
   for (int j = 0; j < data.size(); ++j) {
     Point2D vec = data[j].position.Sub(pi.position);
     float r_square = vec.SquareLength();
-	  net_force = net_force.Add(vec.Scale(Gravity(pi.mass, data[j].mass, r_square)));
+    net_force = net_force.Add(vec.Scale(Gravity(pi.mass, data[j].mass, r_square)));
   }
   pi.velocity = pi.velocity.Add(net_force.Scale(timestep / pi.mass));
 }
@@ -56,7 +56,7 @@ void ParticleSystem::UpdatePoint(int index, float timestep) {
 void ParticleSystem::Simulate(float timestep) {
   for (int i = 0; i < data.size(); ++i) {
     CalculatePoint(i, timestep);
-	UpdatePoint(i, timestep);
+	  UpdatePoint(i, timestep);
   }
 }
 
@@ -72,7 +72,7 @@ void ParticleSystemOpenMP::Simulate(float timestep) {
 }
 
 void ParticleSystemOpenMPDynamic::Simulate(float timestep) { 
-  #pragma omp parallel for schedule(dynamic) num_threads(20)
+  #pragma omp parallel for schedule(dynamic)
   for (int i = 0; i < data.size(); ++i) {
     CalculatePoint(i, timestep);
   }
@@ -87,12 +87,12 @@ void WorkerFunction(ParticleSystem* system, std::atomic<int>* jobs_ptr, float ti
   auto& jobs = *jobs_ptr;
   constexpr int kJobSize = 4;
   while(1) {
-	int end = jobs.fetch_sub(kJobSize);
-	int start = std::max(end - kJobSize, 0);
-	if (end < 0) return;
-	for (int i = start; i < end; ++i) {
-	  system->CalculatePoint(i, timestep);
-	}
+    int end = jobs.fetch_sub(kJobSize);
+    int start = std::max(end - kJobSize, 0);
+    if (end < 0) return;
+    for (int i = start; i < end; ++i) {
+      system->CalculatePoint(i, timestep);
+    }
   }
 }
 
@@ -110,7 +110,7 @@ void ParticleSystemStdThread::Simulate(float timestep) {
 
   // Update results after all calculations are done. Could be parallel?
   for (int i = 0; i < data.size(); ++i) {
-	UpdatePoint(i, timestep);
+    UpdatePoint(i, timestep);
   }
 }
 

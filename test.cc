@@ -49,7 +49,7 @@ class NBodyExperiment {
     }
   protected:
     T universe;
-	  nbody::Point2D min, max; // Range of the points.
+    nbody::Point2D min, max; // Range of the points.
 };
 
 
