@@ -101,7 +101,7 @@ int main(){
   std::cout << "Number of cores: " << scheduler::GetNumProcs() << std::endl;
   std::cout << "Number of points: " << kNumPointsNbody << std::endl;
   std::cout << "name,P0 ms,P50 ms,P90 ms,P99 ms";
-  // RunNBodyTests();
-  RenderNBody(1024);
+  RunNBodyTests();
+  // RenderNBody(1024);
   return 0;
 }
