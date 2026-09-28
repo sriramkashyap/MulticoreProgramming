@@ -50,7 +50,7 @@ struct PointMass {
   Point2D position;
   Point2D velocity;
   float mass = 1.0f;
-  float data[3] = {0.0f}; // pad to 32 bytes
+  float data[3];  // pad to 32 bytes
 };
 
 CUDA_CALLABLE inline float Gravity(float m1, float m2, float square_distance) {
@@ -113,6 +113,11 @@ class ParticleSystemCuda : public ParticleSystem {
   protected:
 	  PointMass* device_data_ = nullptr;
 	  size_t s_bytes_ = 0;
+};
+
+class ParticleSystemCudaShared : public ParticleSystemCuda {
+  public:
+    void Simulate(float timestep) override;
 };
 
 } // namespace nbody.

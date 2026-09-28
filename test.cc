@@ -28,8 +28,8 @@ void InitProfiler() {
 template <class T>
 class NBodyExperiment {
   public:
-    NBodyExperiment() : min(0.0f,0.0f), max(10.0f,10.0f) {
-	    universe.Initialize(kNumPointsNbody, min, max, 0xFFFF);
+    NBodyExperiment(int num_points = kNumPointsNbody) : min(0.0f,0.0f), max(10.0f,10.0f) {
+	    universe.Initialize(num_points, min, max, 0xFFFF);
 	  }
 	  void Run(const std::string& name, int iterations, bool save_image = false, float time_step = kTimeStepNBody) {
       stats::Metric latency_ns;
@@ -56,7 +56,7 @@ class NBodyExperiment {
 void RunNBodyTests() {
   constexpr int kSingleThreadIterations = 10;
   constexpr int kMultiThreadIterations = 300;
-  
+
   // Single threaded.
   NBodyExperiment<nbody::ParticleSystem> nbody_st;
   nbody_st.Run("nbody_st", kSingleThreadIterations);
@@ -86,13 +86,21 @@ void RunNBodyTests() {
   } */
 
   // Cuda
-  NBodyExperiment<nbody::ParticleSystemCuda> nbody_cuda;
-  nbody_cuda.Run("nbody_cuda", kMultiThreadIterations);
+  for (int i = kNumPointsNbody; i < 32768; i+=kNumPointsNbody) {
+    NBodyExperiment<nbody::ParticleSystemCuda> nbody_cuda(i);
+    nbody_cuda.Run(std::string("nbody_cuda") + std::to_string(i), kMultiThreadIterations);
+  }
+
+  // Cuda with shared memory optimization
+  for (int i = kNumPointsNbody; i < 32768; i+=kNumPointsNbody) {
+    NBodyExperiment<nbody::ParticleSystemCudaShared> nbody_cuda(i);
+    nbody_cuda.Run(std::string("nbody_cuda_shared") + std::to_string(i), kMultiThreadIterations);
+  }
 }
 
 void RenderNBody(int iterations) {
   // Saves images of nbody simulation.
-  NBodyExperiment<nbody::ParticleSystemCuda> nbody;
+  NBodyExperiment<nbody::ParticleSystemCudaShared> nbody;
   nbody.Run("image00", iterations, true);
 }
 

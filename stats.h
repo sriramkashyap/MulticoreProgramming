@@ -21,20 +21,26 @@ class Timer {
     return (GetTimeNs() - start);
   }
 
+  int64_t ResetAndGetElapsedNs() {
+    int64_t now = GetTimeNs();
+    int64_t ret = now - start;
+    start = now;
+    return ret;
+  }
 };
 
 class Metric {
   private:
     std::vector<int64_t> data;
   public:
-	Metric();
-	explicit Metric(int starting_size);
+    Metric();
+    explicit Metric(int starting_size);
     void Record(int64_t value);
-	int64_t Count();
-	int64_t Percentile(float p);
-	void Reset();
-	bool Save(const std::string& file_name);
-	void PrintSummary(float scale);
+    int64_t Count();
+    int64_t Percentile(float p);
+    void Reset();
+    bool Save(const std::string& file_name);
+    void PrintSummary(float scale);
 };
 
 } // namespace stats.
